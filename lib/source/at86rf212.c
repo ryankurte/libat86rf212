@@ -14,7 +14,6 @@
 
 //#define DEBUG_AT86RF212
 
-
 // Automagically define PLATFORM_SLEEP_MS on unix-like platforms
 #ifndef PLATFORM_SLEEP_MS
 #if (defined __linux__ || defined __APPLE__ || defined __unix__)
@@ -55,28 +54,6 @@ static int at86rf212_read_reg(struct at86rf212_s *device, uint8_t reg, uint8_t* 
     return res;
 }
 
-// Read an array of registers from the device
-static int at86rf212_read_regs(struct at86rf212_s *device, uint8_t start, uint8_t length, uint8_t* data)
-{
-    uint8_t data_out[length + 1];
-    uint8_t data_in[length + 1];
-    int res;
-
-    data_out[0] = start | AT86RF212_REG_READ_FLAG;
-    for (int i = 0; i < length; i++) {
-        data_out[i + 1] = 0x00;
-    }
-
-    res = device->driver->spi_transfer(device->driver_ctx, length + 1, data_out, data_in);
-
-    if (res >= 0) {
-        for (int i = 0; i < length; i++) {
-            data[i] = data_in[i + 1];
-        }
-    }
-
-    return res;
-}
 
 // Write a single register on the device
 static int at86rf212_write_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val)
@@ -115,9 +92,55 @@ int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val, u
 }
 
 
+// Read a frame from the device
+static int at86rf212_read_frame(struct at86rf212_s *device, uint8_t length, uint8_t* data)
+{
+    uint8_t data_out[length + 2];
+    uint8_t data_in[length + 2];
+    int res;
+
+    data_out[0] = AT86RF212_FRAME_READ_FLAG;
+    for (int i = 0; i < length; i++) {
+        data_out[i + 1] = 0x00;
+    }
+
+    res = device->driver->spi_transfer(device->driver_ctx, length + 1, data_out, data_in);
+
+    if (res >= 0) {
+        for (int i = 0; i < length; i++) {
+            data[i] = data_in[i + 1];
+        }
+    }
+
+    return res;
+}
+
+// Write a frame to the device
+static int at86rf212_write_frame(struct at86rf212_s *device, uint8_t length, uint8_t* data)
+{
+    uint8_t data_out[length + 2];
+    uint8_t data_in[length + 2];
+    int res;
+
+    data_out[0] = AT86RF212_FRAME_READ_FLAG;
+    for (int i = 0; i < length; i++) {
+        data_out[i + 1] = 0x00;
+    }
+
+    res = device->driver->spi_transfer(device->driver_ctx, length + 1, data_out, data_in);
+
+    if (res >= 0) {
+        for (int i = 0; i < length; i++) {
+            data[i] = data_in[i + 1];
+        }
+    }
+
+    return res;
+}
+
 /***        External Functions          ***/
 
-int8_t at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver, void* driver_ctx)
+int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver, void* driver_ctx)
 {
     int res;
 
@@ -126,7 +149,8 @@ int8_t at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *dri
         return AT86RF212_DRIVER_INVALID;
     }
 
-    if (driver->get_irq == NULL) {
+    if ((driver->get_irq == NULL) || (driver->set_reset == NULL)
+        || (driver->set_slp_tr == NULL)) {
         return AT86RF212_DRIVER_INVALID;
     }
 
@@ -134,26 +158,49 @@ int8_t at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *dri
     device->driver = driver;
     device->driver_ctx = driver_ctx;
 
-    // TODO: Initialize device
+    // Initialize device
 
+    // Set pins
+    device->driver->set_reset(device->driver_ctx, 1);
+    device->driver->set_slp_tr(device->driver_ctx, 0);
+
+    // Send reset pulse
+    device->driver->set_reset(device->driver_ctx, 0);
+    PLATFORM_SLEEP_MS(1);
+    device->driver->set_reset(device->driver_ctx, 1);
 
     // Give device time to reset
     PLATFORM_SLEEP_MS(10);
 
     AT86RF212_DEBUG_PRINT("RESET complete\r\n");
 
-    // TODO: Check communication
-
+    // Check communication
+    uint8_t who;
+    res = at86rf212_read_reg(device, AT86RF212_REG_PART_NUM, &who);
+    if (res < 0) {
+        AT86RF212_DEBUG_PRINT("WHOAMI read error: %d\r\n", res);
+        return AT86RF212_DRIVER_ERROR;
+    }
+    if (who != 0x07) {
+        AT86RF212_DEBUG_PRINT("Unexpected whoami response: %.2x\r\n", who);
+        return AT86RF212_COMMS_ERROR;
+    }
 
     AT86RF212_DEBUG_PRINT("Device identified\r\n");
 
     // TODO: Configure
 
+    // Disable TRX
+    res = at86rf212_write_reg(device, AT86RF212_REG_TRX_STATE, AT86RF212_CMD_TRX_OFF);
+    if (res < 0) {
+        AT86RF212_DEBUG_PRINT("Mode set error: %d\r\n", res);
+        return AT86RF212_DRIVER_ERROR;
+    }
 
     return 0;
 }
 
-int8_t at86rf212_close(struct at86rf212_s *device)
+int at86rf212_close(struct at86rf212_s *device)
 {
     // TODO: shutdown
 
@@ -164,4 +211,59 @@ int8_t at86rf212_close(struct at86rf212_s *device)
     return 0;
 }
 
+int at86rf212_set_state(struct at86rf212_s *device, uint8_t state)
+{
+
+    return 0;
+}
+
+int at86rf212_start_rx(struct at86rf212_s *device)
+{
+
+    return 0;
+}
+
+int at86rf212_check_rx(struct at86rf212_s *device)
+{
+    int res;
+    uint8_t buffer[AT86RF212_MAX_LENGTH];
+
+    // Check CRC
+    // AT86RF212_REG_PHY_RSSI & 0x80 != 0
+
+    // Fetch frame length
+    uint8_t frame_len;
+    res = at86rf212_read_frame(device, AT86RF212_LEN_FIELD_LEN, &frame_len);
+    if(res < 0) {
+        return AT86RF212_DRIVER_ERROR;
+    }
+
+    // Check frame length is valid
+    if(frame_len > AT86RF212_MAX_LENGTH) {
+        return AT86RF212_LEN_ERROR;
+    }
+
+    // Read frame from buffer
+    res = at86rf212_read_frame(device, AT86RF212_LEN_FIELD_LEN + frame_len, buffer);
+
+    return res;
+}
+
+int at86rf212_get_rx(struct at86rf212_s *device)
+{
+
+    return 0;
+}
+
+int at86rf212_start_tx(struct at86rf212_s *device)
+{
+
+    return 0;
+}
+
+int at86rf212_check_tx(struct at86rf212_s *device)
+{
+
+    return 0;
+}
 

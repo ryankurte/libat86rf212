@@ -19,7 +19,8 @@ enum at86rf212_result_e {
     AT86RF212_RES_OK = 0,
     AT86RF212_DRIVER_INVALID = -1,
     AT86RF212_DRIVER_ERROR = -2,
-    AT86RF212_COMMS_ERROR = -3
+    AT86RF212_COMMS_ERROR = -3,
+    AT86RF212_LEN_ERROR = -4
 };
 
 // SPI interaction function for dependency injection
@@ -41,10 +42,10 @@ struct at86rf212_driver_s {
 
 // Create an at86rf212 device
 // Note that the device and driver objects must continue to exist outside this scope.
-int8_t at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver, void* driver_ctx);
+int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver, void* driver_ctx);
 
 // Close an at86rf212 device
-int8_t at86rf212_close(struct at86rf212_s *device);
+int at86rf212_close(struct at86rf212_s *device);
 
 
 

@@ -15,6 +15,9 @@ For C++ use you can use the above function, or create an object extending `AT86R
 Both of the above functions should return >= 0 for success, < 0 for failure. For an example (using [USB-Thing](https://github.com/ryankurte/usb-thing) check out the [util](/util/source/main.cpp). 
 
 ## Status
+
+Early WIP. No (useful) functionality yet.
+
 - [ ] Register operations
 - [ ] Initialisation
 - [ ] Polling 
