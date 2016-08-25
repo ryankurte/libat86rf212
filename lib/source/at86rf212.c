@@ -12,7 +12,7 @@
 
 #include "at86rf212/at86rf212_regs.h"
 
-//#define DEBUG_AT86RF212
+#define DEBUG_AT86RF212
 
 // Automagically define PLATFORM_SLEEP_MS on unix-like platforms
 #ifndef PLATFORM_SLEEP_MS
@@ -166,11 +166,11 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
 
     // Send reset pulse
     device->driver->set_reset(device->driver_ctx, 0);
-    PLATFORM_SLEEP_MS(1);
+    PLATFORM_SLEEP_MS(10);
     device->driver->set_reset(device->driver_ctx, 1);
 
     // Give device time to reset
-    PLATFORM_SLEEP_MS(10);
+    PLATFORM_SLEEP_MS(100);
 
     AT86RF212_DEBUG_PRINT("RESET complete\r\n");
 

@@ -45,18 +45,55 @@ int spi_transfer(void* context, int len, uint8_t *data_out, uint8_t* data_in)
     return res;
 }
 
-// at86rf212 driver object
-struct at86rf212_driver_s at86rf212_driver = { spi_transfer };
+int set_reset(void* context, uint8_t val)
+{
+    usbthing_t *usbthing = (usbthing_t *) context;
+
+    int res = USBTHING_gpio_set(*usbthing, 0, val);
+
+    return res;
+}
+
+int set_slp_tr(void* context, uint8_t val)
+{
+    usbthing_t *usbthing = (usbthing_t *) context;
+
+    int res = USBTHING_gpio_set(*usbthing, 1, val);
+
+    return res;
+}
+
+int get_irq(void* context, uint8_t *val)
+{
+    usbthing_t *usbthing = (usbthing_t *) context;
+    int val_int;
+
+    int res = USBTHING_gpio_get(*usbthing, 2, &val_int);
+
+    *val = val_int;
+
+    return res;
+}
+
+
+
 
 int main(int argc, char** argv)
 {
     int res;
 
+    // at86rf212 driver object
+    struct at86rf212_driver_s at86rf212_driver;
+    at86rf212_driver.spi_transfer = spi_transfer;
+    at86rf212_driver.set_reset = set_reset;
+    at86rf212_driver.set_slp_tr = set_slp_tr;
+    at86rf212_driver.get_irq = get_irq;
+
     usbthing_t usbthing;
     char version[32];
 
     // Create the MPU device
-    AT86RF212::Mpu9250 radio = AT86RF212::At86rf212();
+    AT86RF212::At86rf212 radio = AT86RF212::At86rf212();
 
     // Initialise USB-Thing static components
     USBTHING_init();
@@ -69,11 +106,15 @@ int main(int argc, char** argv)
     }
 
     // Configure SPI speed and mode
-    res = USBTHING_spi_configure(usbthing, 400000, 3);
+    res = USBTHING_spi_configure(usbthing, 400000, 0);
     if (res < 0) {
         printf("Error %d setting SPI speed\r\n", res);
         goto end;
     }
+
+    USBTHING_gpio_configure(usbthing, 0, 1, 0, 0);
+    USBTHING_gpio_configure(usbthing, 1, 1, 0, 0);
+    USBTHING_gpio_configure(usbthing, 2, 0, 0, 0);
 
     printf("Connected to USB-Thing\r\n");
 
