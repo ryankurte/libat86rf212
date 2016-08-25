@@ -18,9 +18,10 @@ extern "C" {
 enum at86rf212_result_e {
     AT86RF212_RES_OK = 0,
     AT86RF212_DRIVER_INVALID = -1,
-    AT86RF212_DRIVER_ERROR = -2,
-    AT86RF212_COMMS_ERROR = -3,
-    AT86RF212_LEN_ERROR = -4
+    AT86RF212_ERROR_DRIVER = -2,
+    AT86RF212_ERROR_COMMS = -3,
+    AT86RF212_ERROR_LEN = -4,
+    AT86RF212_ERROR_RETRIES = -5
 };
 
 // SPI interaction function for dependency injection
@@ -47,7 +48,15 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
 // Close an at86rf212 device
 int at86rf212_close(struct at86rf212_s *device);
 
+int at86rf212_set_state(struct at86rf212_s *device, uint8_t state);
+int at86rf212_set_state_blocking(struct at86rf212_s *device, uint8_t state);
+int at86rf212_get_state(struct at86rf212_s *device, uint8_t *state);
 
+int at86rf212_set_channel(struct at86rf212_s *device, uint8_t channel);
+int at86rf212_get_channel(struct at86rf212_s *device, uint8_t *channel);
+
+int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data);
+int at86rf212_check_tx(struct at86rf212_s *device);
 
 #ifdef __cplusplus
 }

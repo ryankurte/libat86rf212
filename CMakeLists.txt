@@ -31,6 +31,7 @@ include_directories(${PROJECT_SOURCE_DIR}/util/include)
 # Add project sources
 set(TEST_SOURCES
     ${PROJECT_SOURCE_DIR}/test/source/main.cpp
+    ${PROJECT_SOURCE_DIR}/test/source/usbthing_bindings.c
     ${PROJECT_SOURCE_DIR}/test/source/at86rf212test.cpp
 )
 
@@ -46,7 +47,7 @@ include_directories(${CMAKE_BINARY_DIR})
 
 # Built Tests
 add_executable(${TARGET}test ${TEST_SOURCES})
-target_link_libraries(${TARGET}test ${OPTIONAL_LIBS} pthread gmock)
+target_link_libraries(${TARGET}test ${OPTIONAL_LIBS} usbthing pthread gmock)
 add_dependencies(${TARGET}test version)
 
 # Build Util (requires libusbthing and USB-Thing hardware).

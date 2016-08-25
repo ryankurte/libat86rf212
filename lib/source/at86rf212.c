@@ -27,10 +27,13 @@
 
 // Wrap debug outputs
 #ifdef DEBUG_AT86RF212
+#include <stdio.h>
 #define AT86RF212_DEBUG_PRINT(...) printf(__VA_ARGS__)
 #else
 #define AT86RF212_DEBUG_PRINT(...)
 #endif
+
+#define AT86RF212_MAX_RETRIES       1000
 
 
 /***        Internal Functions          ***/
@@ -72,7 +75,7 @@ static int at86rf212_write_reg(struct at86rf212_s *device, uint8_t reg, uint8_t 
 
 // Update a single register on the device
 // Mask should be the mask for the information to be changed
-int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val, uint8_t mask)
+int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t mask, uint8_t val)
 {
     uint8_t data = 0;
     int res;
@@ -179,11 +182,11 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
     res = at86rf212_read_reg(device, AT86RF212_REG_PART_NUM, &who);
     if (res < 0) {
         AT86RF212_DEBUG_PRINT("WHOAMI read error: %d\r\n", res);
-        return AT86RF212_DRIVER_ERROR;
+        return AT86RF212_ERROR_DRIVER;
     }
     if (who != 0x07) {
         AT86RF212_DEBUG_PRINT("Unexpected whoami response: %.2x\r\n", who);
-        return AT86RF212_COMMS_ERROR;
+        return AT86RF212_ERROR_COMMS;
     }
 
     AT86RF212_DEBUG_PRINT("Device identified\r\n");
@@ -191,10 +194,17 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
     // TODO: Configure
 
     // Disable TRX
-    res = at86rf212_write_reg(device, AT86RF212_REG_TRX_STATE, AT86RF212_CMD_TRX_OFF);
+    res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TRX_OFF);
     if (res < 0) {
         AT86RF212_DEBUG_PRINT("Mode set error: %d\r\n", res);
-        return AT86RF212_DRIVER_ERROR;
+        return AT86RF212_ERROR_DRIVER;
+    }
+
+    // Set channel
+    res = at86rf212_set_channel(device, AT86RF212_DEFAULT_CHANNEL);
+    if (res < 0) {
+        AT86RF212_DEBUG_PRINT("Channel set error: %d\r\n", res);
+        return AT86RF212_ERROR_DRIVER;
     }
 
     return 0;
@@ -213,17 +223,93 @@ int at86rf212_close(struct at86rf212_s *device)
 
 int at86rf212_set_state(struct at86rf212_s *device, uint8_t state)
 {
+    return at86rf212_update_reg(device, AT86RF212_REG_TRX_STATE, AT86RF212_TRX_STATE_TRX_CMD_MASK, state);
+}
+
+int at86rf212_set_state_blocking(struct at86rf212_s *device, uint8_t state)
+{
+    int res;
+    int count = 0;
+
+    // Enable PLL
+    res = at86rf212_update_reg(device, AT86RF212_REG_TRX_STATE, AT86RF212_TRX_STATE_TRX_CMD_MASK, state);
+    if (res < 0) {
+        return res;
+    }
+
+    // Block while state change occurs
+    while ((state & AT86RF212_TRX_STATUS_TRX_STATUS_MASK) == AT86RF212_STATE_TRANSITION_IN_PROGRESS) {
+        res = at86rf212_read_reg(device, AT86RF212_REG_TRX_STATE, &state);
+        count ++;
+        if (count > AT86RF212_MAX_RETRIES) {
+            return AT86RF212_ERROR_RETRIES;
+        }
+    }
 
     return 0;
 }
 
+int at86rf212_get_state(struct at86rf212_s *device, uint8_t *state)
+{
+    return at86rf212_read_reg(device, AT86RF212_REG_TRX_STATE, state);
+}
+
+
+int at86rf212_set_channel(struct at86rf212_s *device, uint8_t channel)
+{
+    return at86rf212_update_reg(device, AT86RF212_REG_PHY_CC_CCA,
+                                AT86RF212_PHY_CC_CCA_CHANNEL_MASK,
+                                channel << AT86RF212_PHY_CC_CCA_CHANNEL_SHIFT);
+}
+
+int at86rf212_get_channel(struct at86rf212_s *device, uint8_t *channel)
+{
+    int res = at86rf212_read_reg(device, AT86RF212_REG_PHY_CC_CCA, channel);
+
+    *channel = (*channel >> AT86RF212_PHY_CC_CCA_CHANNEL_SHIFT)
+               & AT86RF212_PHY_CC_CCA_CHANNEL_MASK;
+
+    return res;
+}
+
+int at86rf212_set_cca_mode(struct at86rf212_s *device, uint8_t mode)
+{
+    return at86rf212_update_reg(device, AT86RF212_REG_PHY_CC_CCA,
+                                AT86RF212_PHY_CC_CCA_CHANNEL_MASK,
+                                mode << AT86RF212_PHY_CC_CCA_CHANNEL_SHIFT);
+}
+
 int at86rf212_start_rx(struct at86rf212_s *device)
 {
+    int res;
+
+    // Enable RX mode
+    res = at86rf212_set_state_blocking(device, AT86RF212_CMD_RX_ON);
+    if (res < 0) {
+        return res;
+    }
 
     return 0;
 }
 
 int at86rf212_check_rx(struct at86rf212_s *device)
+{
+    int res;
+    uint8_t irq;
+
+    res = at86rf212_read_reg(device, AT86RF212_REG_IRQ_STATUS, &irq);
+    if (res < 0) {
+        return AT86RF212_ERROR_DRIVER;
+    }
+
+    if ((irq & AT86RF212_IRQ_STATUS_IRQ_3_TRX_END_MASK) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int at86rf212_get_rx(struct at86rf212_s *device)
 {
     int res;
     uint8_t buffer[AT86RF212_MAX_LENGTH];
@@ -234,13 +320,13 @@ int at86rf212_check_rx(struct at86rf212_s *device)
     // Fetch frame length
     uint8_t frame_len;
     res = at86rf212_read_frame(device, AT86RF212_LEN_FIELD_LEN, &frame_len);
-    if(res < 0) {
-        return AT86RF212_DRIVER_ERROR;
+    if (res < 0) {
+        return AT86RF212_ERROR_DRIVER;
     }
 
     // Check frame length is valid
-    if(frame_len > AT86RF212_MAX_LENGTH) {
-        return AT86RF212_LEN_ERROR;
+    if (frame_len > AT86RF212_MAX_LENGTH) {
+        return AT86RF212_ERROR_LEN;
     }
 
     // Read frame from buffer
@@ -249,20 +335,44 @@ int at86rf212_check_rx(struct at86rf212_s *device)
     return res;
 }
 
-int at86rf212_get_rx(struct at86rf212_s *device)
+int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data)
 {
+    int res;
 
-    return 0;
-}
+    // Enable PLL
+    res = at86rf212_set_state_blocking(device, AT86RF212_CMD_PLL_ON);
+    if (res < 0) {
+        return res;
+    }
 
-int at86rf212_start_tx(struct at86rf212_s *device)
-{
+    // Assert SLP_TR pin to trigger transmission
+    device->driver->set_slp_tr(device->driver_ctx, 1);
+    PLATFORM_SLEEP_MS(1);
+    device->driver->set_slp_tr(device->driver_ctx, 0);
 
-    return 0;
+    // Write frame to device
+    // Note that data[0] must be length - AT86RF212_LEN_FIELD_LEN
+    res = at86rf212_write_frame(device, length, data);
+    if (res < 0) {
+        return res;
+    }
+
+    return res;
 }
 
 int at86rf212_check_tx(struct at86rf212_s *device)
 {
+    int res;
+    uint8_t irq;
+
+    res = at86rf212_read_reg(device, AT86RF212_REG_IRQ_STATUS, &irq);
+    if (res < 0) {
+        return AT86RF212_ERROR_DRIVER;
+    }
+
+    if ((irq & AT86RF212_IRQ_STATUS_IRQ_3_TRX_END_MASK) != 0) {
+        return 1;
+    }
 
     return 0;
 }

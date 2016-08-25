@@ -37,6 +37,7 @@ enum at86rf212_trx_cmd_e {
     AT86RF212_CMD_SLEEP         = 0x0F,   //!< Software implemented command
 };
 
+
 /** sub-register TRX_STATUS in register TRX_STATUS */
 enum at86rf212_tal_trx_status_e {
     AT86RF212_P_ON    = 0x00,   //!< Constant P_ON for sub-register @ref SR_TRX_STATUS
@@ -85,6 +86,9 @@ enum at86rf212_tal_state_e {
     TAL_TX_AUTO = 1,
     TAL_TX_END = 2
 };
+
+#define AT86RF212_DEFAULT_CHANNEL   0x01
+#define AT86RF212_DEFAULT_CCA_MODE  0x01
 
 // AT86RF212 object for internal use
 struct at86rf212_s {
