@@ -122,6 +122,17 @@ enum at86rf212_irq_e {
     AT86RF212_IRQ_7_BAT_LOW     = 0x80,
 };
 
+enum at86rf212_clkm_rate_e {
+    AT86RF212_CLKM_RATE_NONE                    = 0x00,
+    AT86RF212_CLKM_RATE_1MHZ                    = 0x01,
+    AT86RF212_CLKM_RATE_2MHZ                    = 0x02,
+    AT86RF212_CLKM_RATE_4MHZ                    = 0x03,
+    AT86RF212_CLKM_RATE_8MHZ                    = 0x04,
+    AT86RF212_CLKM_RATE_16MHZ                   = 0x05,
+    AT86RF212_CLKM_RATE_250KHZ                  = 0x06,
+    AT86RF212_CLKM_RATE_802_15_4_SYMBOL_RATE    = 0x07
+};
+
 
 /** Device defaults ***/
 #define AT86RF212_DEFAULT_CHANNEL               1

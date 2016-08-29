@@ -84,33 +84,33 @@ TEST_F(At86rf212Test, InitialConfig)
   // Check default CCA mode
   res = radio.read_reg(AT86RF212_REG_PHY_CC_CCA, &val);
   ASSERT_EQ(0, res);
-  ASSERT_EQ(1, (val >> 5) & 0x03);
+  EXPECT_EQ(1, (val >> 5) & 0x03);
 
   // Check default CSMA exponents
   res = radio.read_reg(AT86RF212_REG_CSMA_BE, &val);
   ASSERT_EQ(0, res);
-  ASSERT_EQ(AT86RF212_DEFAULT_MINBE, (val >> 0) & 0x0f);
-  ASSERT_EQ(AT86RF212_DEFAULT_MAXBE, (val >> 4) & 0x0f);
+  EXPECT_EQ(AT86RF212_DEFAULT_MINBE, (val >> 0) & 0x0f);
+  EXPECT_EQ(AT86RF212_DEFAULT_MAXBE, (val >> 4) & 0x0f);
 
   // Check default CSMA backoff
   res = radio.read_reg(AT86RF212_REG_XAH_CTRL_0, &val);
   ASSERT_EQ(0, res);
-  ASSERT_EQ(AT86RF212_DEFAULT_MAX_CSMA_BACKOFFS, (val >> 1) & 0x07);
+  EXPECT_EQ(AT86RF212_DEFAULT_MAX_CSMA_BACKOFFS, (val >> 1) & 0x07);
 
   // Check radio is in promiscuous mode
   res = radio.read_reg(AT86RF212_REG_XAH_CTRL_1, &val);
   ASSERT_EQ(0, res);
-  ASSERT_EQ(1, (val >> 1) & 0x01);
+  EXPECT_EQ(1, (val >> 1) & 0x01);
 
   // Check auto CRC is enabled
   res = radio.read_reg(AT86RF212_REG_TRX_CTRL_1, &val);
   ASSERT_EQ(0, res);
-  ASSERT_EQ(1, (val >> 5) & 0x01);
+  EXPECT_EQ(1, (val >> 5) & 0x01);
 
   // Check IRQ_MASK_MODE is set
   res = radio.read_reg(AT86RF212_REG_TRX_CTRL_1, &val);
   ASSERT_EQ(0, res);
-  ASSERT_EQ(1, (val >> 1) & 0x01);
+  EXPECT_EQ(1, (val >> 1) & 0x01);
 
 }
 
@@ -154,26 +154,30 @@ TEST_F(At86rf212Test, SetChannel)
   ASSERT_EQ(1, channel);
 }
 
-//Frame Control Field + Seq No. + Address + security
+
 #define HEADER_SIZE       (2+1+(2+2+2)+0)
 #define SEND_TIMEOUT_S    2
-static uint8_t radio_header[HEADER_SIZE] = {0x61, 0x88, 0x05, 0x00, 0x01, 0x01, 0X01, 0x02, 0x02};
-
+uint8_t radio_header[HEADER_SIZE] = {0x61, 0x88, 0x05, 0x00, 0x01, 0x01, 0X01, 0x02, 0x02};
+#define DATA_SIZE         4
+uint8_t radio_data[DATA_SIZE] = {0x80, 0x01, 'A', 'L'};
 
 TEST_F(At86rf212Test, Send)
 {
   int res;
   uint8_t channel = 0;
+  uint8_t data[HEADER_SIZE + DATA_SIZE + 2 + 1];
 
-  uint8_t data[HEADER_SIZE + 16];
+  data[0] = HEADER_SIZE + DATA_SIZE + 2;
+
   for (int i = 0; i < HEADER_SIZE; i++) {
-    data[i] = radio_header[i];
+    data[i + 1] = radio_header[i];
   }
-  for (int i = HEADER_SIZE; i < (HEADER_SIZE + 16); i++) {
-    data[i] = i;
+  for (int i = 0; i < DATA_SIZE; i++) {
+    data[i + HEADER_SIZE + 1] = radio_data[i];
   }
-
-  data[0] = HEADER_SIZE + 16 - 1;
+  for (int i = 0; i < 2; i++) {
+    data[i + HEADER_SIZE + DATA_SIZE + 1] = 0x00;
+  }
 
   res = radio.start_tx(sizeof(data), data);
   ASSERT_EQ(AT86RF212_RES_OK, res);
@@ -185,7 +189,7 @@ TEST_F(At86rf212Test, Send)
     if (res == 1) {
       break;
     }
-    if (time(NULL) > (start_time + 2)) {
+    if (time(NULL) > (start_time + 1)) {
       ASSERT_TRUE(false);
     }
   }

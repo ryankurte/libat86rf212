@@ -23,7 +23,9 @@ enum at86rf212_result_e {
     AT86RF212_ERROR_COMMS = -3,
     AT86RF212_ERROR_LEN = -4,
     AT86RF212_ERROR_RETRIES = -5,
-    AT86RF212_ERROR_PLL = -6
+    AT86RF212_ERROR_PLL = -6,
+    AT86RF212_ERROR_DVDD = -7,
+    AT86RF212_ERROR_AVDD = -8
 };
 
 // SPI interaction function for dependency injection
@@ -68,6 +70,7 @@ int at86rf212_check_tx(struct at86rf212_s *device);
 
 int at86rf212_read_reg(struct at86rf212_s *device, uint8_t reg, uint8_t* val);
 int at86rf212_write_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val);
+int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t mask, uint8_t val);
 
 #ifdef __cplusplus
 }

@@ -14,11 +14,12 @@
 
 #define DEBUG_AT86RF212
 
-// Automagically define PLATFORM_SLEEP_MS on unix-like platforms
+// Automagically define PLATFORM_SLEEP_MS and _US on unix-like platforms
 #ifndef PLATFORM_SLEEP_MS
 #if (defined __linux__ || defined __APPLE__ || defined __unix__)
 #include <unistd.h>
 #define PLATFORM_SLEEP_MS(a)    usleep(a * 1000);
+#define PLATFORM_SLEEP_US(a)    usleep(a);
 #else
 #error "PLATFORM_SLEEP_MS undefined and platform not recognised"
 #endif
@@ -104,8 +105,8 @@ int at86rf212_write_subreg(struct at86rf212_s *device, uint8_t reg, uint8_t mask
 // Read a frame from the device
 static int at86rf212_read_frame(struct at86rf212_s *device, uint8_t length, uint8_t* data)
 {
-    uint8_t data_out[length + 2];
-    uint8_t data_in[length + 2];
+    uint8_t data_out[length + 1];
+    uint8_t data_in[length + 1];
     int res;
 
     data_out[0] = AT86RF212_FRAME_READ_FLAG;
@@ -133,18 +134,10 @@ static int at86rf212_write_frame(struct at86rf212_s *device, uint8_t length, uin
 
     data_out[0] = AT86RF212_FRAME_READ_FLAG;
     for (int i = 0; i < length; i++) {
-        data_out[i + 1] = 0x00;
+        data_out[i + 1] = data[i];
     }
 
-    res = device->driver->spi_transfer(device->driver_ctx, length + 1, data_out, data_in);
-
-    if (res >= 0) {
-        for (int i = 0; i < length; i++) {
-            data[i] = data_in[i + 1];
-        }
-    }
-
-    return res;
+    return device->driver->spi_transfer(device->driver_ctx, length + 1, data_out, data_in);
 }
 
 /***        External Functions          ***/
@@ -152,6 +145,7 @@ static int at86rf212_write_frame(struct at86rf212_s *device, uint8_t length, uin
 int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver, void* driver_ctx)
 {
     int res;
+    uint8_t val;
 
     // Check driver functions exist
     if (driver->spi_transfer == NULL) {
@@ -204,6 +198,13 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
     if (res < 0) {
         AT86RF212_DEBUG_PRINT("Mode set error: %d\r\n", res);
         return AT86RF212_ERROR_DRIVER;
+    }
+
+    // Check Digital Voltage
+    res = at86rf212_read_reg(device, AT86RF212_REG_VREG_CTRL, &val);
+    if ((val & AT86RF212_VREG_CTRL_DVDD_OK_MASK) == 0) {
+        AT86RF212_DEBUG_PRINT("DVDD error\r\n");
+        return AT86RF212_ERROR_DVDD;
     }
 
     // Set channel
@@ -279,9 +280,9 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
         return AT86RF212_ERROR_DRIVER;
     }
 
-    //res = at86rf212_set_short_address(device, 0xcafe);
+    res = at86rf212_set_short_address(device, 0xcafe);
 
-    //res = at86rf212_set_pan_id(device, 0x0100);
+    res = at86rf212_set_pan_id(device, 0x0100);
 
     return AT86RF212_RES_OK;
 }
@@ -401,6 +402,8 @@ int at86rf212_start_rx(struct at86rf212_s *device)
 {
     int res;
 
+    // TODO: ensure PLL is enabled
+
     // Enable RX mode
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_RX_ON);
     if (res < 0) {
@@ -461,14 +464,14 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
 
     uint8_t send_data[AT86RF212_MAX_LENGTH];
 
-
-    // Enable PLL
     // Reset state
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TRX_OFF);
     if (res < 0) {
-        AT86RF212_DEBUG_PRINT("Timeout setting TRX OFF state\r\n", irq);
+        AT86RF212_DEBUG_PRINT("Timeout setting TRX OFF state\r\n");
         return res;
     }
+
+    PLATFORM_SLEEP_MS(1);
 
     // Clear interrupts
     res = at86rf212_get_irq_status(device, &irq);
@@ -479,21 +482,10 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
     // Enable PLL
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_PLL_ON);
     if (res < 0) {
-        AT86RF212_DEBUG_PRINT("Timeout setting PLL ON state\r\n", irq);
+        AT86RF212_DEBUG_PRINT("Timeout setting PLL ON state\r\n");
         return res;
     }
 
-    // Check DVDD / AVDD (should not be required here)
-    res = at86rf212_read_reg(device, AT86RF212_REG_VREG_CTRL, &state);
-    if((state & AT86RF212_VREG_CTRL_DVDD_OK_MASK) == 0) {
-        AT86RF212_DEBUG_PRINT("DVDD error\r\n");
-    }
-    if((state & AT86RF212_VREG_CTRL_AVDD_OK_MASK) == 0) {
-        AT86RF212_DEBUG_PRINT("AVDD error\r\n");
-    }
-
-    // For some reason no PLL_LOCK interrupt fires, though the
-    // device enters the PLL_ON state
     // Await PLL lock
     for (int i = 0; i < AT86RF212_PLL_LOCK_RETRIES; i++) {
         res = at86rf212_get_irq_status(device, &irq);
@@ -501,10 +493,9 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
             return res;
         }
         if ((irq & AT86RF212_IRQ_STATUS_IRQ_0_PLL_LOCK_MASK) != 0) {
-            printf("boop\r\n");
             break;
         }
-        PLATFORM_SLEEP_MS(1);
+        PLATFORM_SLEEP_US(1);
     }
 
     if ((irq & AT86RF212_IRQ_STATUS_IRQ_0_PLL_LOCK_MASK) == 0) {
@@ -512,38 +503,27 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
         return AT86RF212_ERROR_PLL;
     }
 
-    res = at86rf212_get_state(device, &state);
-    printf("State 0: 0x%x\r\n", state);
-
-    send_data[0] = length;
-    for (int i = 0; i < length; i++) {
-        send_data[i + 1] = data[i];
-    }
-
     // Write frame to device
     // Note that data[0] must be length - AT86RF212_LEN_FIELD_LEN
-    res = at86rf212_write_frame(device, length + 1, send_data);
+    res = at86rf212_write_frame(device, length, data);
     if (res < 0) {
         return res;
     }
 
+#if 0
+//TODO: not currently using auto mode
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TX_ARET_ON);
     if (res < 0) {
         AT86RF212_DEBUG_PRINT("Timeout setting TX_ARET_ON\r\n", irq);
         return res;
     }
-
-    res = at86rf212_get_state(device, &state);
-    printf("State 1: 0x%x\r\n", state);
+#endif
 
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TX_START);
     if (res < 0) {
-        AT86RF212_DEBUG_PRINT("Timeout setting TRX_START\r\n", irq);
+        AT86RF212_DEBUG_PRINT("Timeout setting TRX_START\r\n");
         return res;
     }
-
-    res = at86rf212_get_state(device, &state);
-    printf("State 2: 0x%x\r\n", state);
 
 #if 0
     // Assert SLP_TR pin to trigger transmission
@@ -566,7 +546,7 @@ int at86rf212_check_tx(struct at86rf212_s *device)
     }
 
     if ((irq & AT86RF212_IRQ_STATUS_IRQ_3_TRX_END_MASK) != 0) {
-        return 1;
+        return AT86RF212_RES_DONE;
     }
 
     return AT86RF212_RES_OK;
