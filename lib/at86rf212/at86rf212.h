@@ -52,26 +52,35 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
 // Close an at86rf212 device
 int at86rf212_close(struct at86rf212_s *device);
 
+// State functions
 int at86rf212_set_state(struct at86rf212_s *device, uint8_t state);
 int at86rf212_set_state_blocking(struct at86rf212_s *device, uint8_t state);
 int at86rf212_get_state(struct at86rf212_s *device, uint8_t *state);
 
+// Channel functions
 int at86rf212_set_channel(struct at86rf212_s *device, uint8_t channel);
 int at86rf212_get_channel(struct at86rf212_s *device, uint8_t *channel);
 
+int at86rf212_set_power_raw(struct at86rf212_s *device, uint8_t power);
+
+// Address and filtering functions
 int at86rf212_set_short_address(struct at86rf212_s *device, uint16_t address);
 int at86rf212_set_pan_id(struct at86rf212_s *device, uint16_t pan_id);
 
+// IRQ functions
 int at86rf212_set_irq_mask(struct at86rf212_s *device, uint8_t mask);
 int at86rf212_get_irq_status(struct at86rf212_s *device, uint8_t *status);
 
+// Transmit functions
 int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data);
 int at86rf212_check_tx(struct at86rf212_s *device);
 
+// Receive functions
 int at86rf212_start_rx(struct at86rf212_s *device);
 int at86rf212_check_rx(struct at86rf212_s *device);
 int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data);
 
+// Register functions
 int at86rf212_read_reg(struct at86rf212_s *device, uint8_t reg, uint8_t* val);
 int at86rf212_write_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val);
 int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t mask, uint8_t val);

@@ -72,6 +72,7 @@ void run_rx(AT86RF212::At86rf212* radio)
     }
 }
 
+//0b 61 88 05 00 01 01 01 02 02 80 01
 void run_tx(AT86RF212::At86rf212* radio)
 {
     uint8_t data_out[127];
@@ -84,6 +85,8 @@ void run_tx(AT86RF212::At86rf212* radio)
         char* line = readline(">");
 
         if (line != NULL) {
+            add_history(line);
+
             if (strncmp(line, "exit", 4) == 0) {
                 break;
             }
@@ -108,13 +111,12 @@ void run_tx(AT86RF212::At86rf212* radio)
                         printf("Error %d checking send\r\n", res);
                         break;
                     } else if (res > 0) {
-                        printf("Send complete\r\n");
+                        printf("Sent %d bytes\r\n", len_out);
                         break;
                     }
                 }
             }
 
-            add_history(line);
             free(line);
             len_out = 0;
         }
@@ -181,16 +183,22 @@ int main(int argc, char** argv)
         goto end;
     }
 
-    res = radio.set_short_address(config.address);
-    if (res < 0) {
-        printf("Error %d setting address\r\n", res);
-        goto end;
+    if (config.address != 0) {
+        printf ("address: %d\r\n", config.address);
+        res = radio.set_short_address(config.address);
+        if (res < 0) {
+            printf("Error %d setting address\r\n", res);
+            goto end;
+        }
     }
 
-    res = radio.set_pan_id(config.pan_id);
-    if (res < 0) {
-        printf("Error %d setting pan_id\r\n", res);
-        goto end;
+    if (config.pan_id != 0) {
+        printf ("pan id: %d\r\n", config.pan_id);
+        res = radio.set_pan_id(config.pan_id);
+        if (res < 0) {
+            printf("Error %d setting pan_id\r\n", res);
+            goto end;
+        }
     }
 
     res = radio.set_channel(config.channel);
@@ -203,9 +211,7 @@ int main(int argc, char** argv)
     // Bind signal handler to exit
     signal(SIGINT, int_handler);
 
-
-
-
+    // Run mode specific main loops
     switch (config.mode) {
     case MODE_RX:
         run_rx(&radio);
@@ -249,8 +255,8 @@ int parse_args (int argc, char **argv, struct config_s *config)
     // Set defaults
     config->mode = -1;
     config->channel = 1;
-    config->pan_id = 1;
-    config->address = 1;
+    config->pan_id = 0;
+    config->address = 0;
 
     static struct option long_options[] = {
         /* These options set a flag. */
@@ -295,12 +301,10 @@ int parse_args (int argc, char **argv, struct config_s *config)
 
         case 'a':
             config->address = atoi(optarg);
-            printf ("address: %d\r\n", config->address);
             break;
 
         case 'p':
             config->pan_id = atoi(optarg);
-            printf ("pan_id: %d\r\n", config->pan_id);
             break;
 
         case 'v':
