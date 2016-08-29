@@ -72,12 +72,36 @@ void run_rx(AT86RF212::At86rf212* radio)
     }
 }
 
+int build_header(uint8_t seq, uint16_t pan, uint16_t dest_addr, uint16_t src_addr, uint8_t* data)
+{
+    uint8_t header[9];
+
+    header[0] = 0x61;
+    header[1] = 0x88;
+    header[2] = seq;
+    header[3] = pan & 0xFF;
+    header[4] = (pan >> 8) & 0xFF;
+    header[5] = dest_addr & 0xFF;
+    header[6] = (dest_addr >> 8) & 0xFF;
+    header[7] = src_addr & 0xFF;
+    header[8] = (src_addr >> 8) & 0xFF;
+
+    for (int i = 0; i < sizeof(header); i++) {
+        data[i] = header[i];
+    }
+
+    return sizeof(header);
+}
+
 //0b 61 88 05 00 01 01 01 02 02 80 01
 void run_tx(AT86RF212::At86rf212* radio)
 {
+    uint8_t data_read[127];
     uint8_t data_out[127];
+    uint8_t len_read = 0;
     uint8_t len_out = 0;
     int res;
+    uint8_t seq = 0;
 
     printf("Interactive transmit mode, type 'exit' to exit\r\n");
 
@@ -93,12 +117,30 @@ void run_tx(AT86RF212::At86rf212* radio)
 
             char* token = strtok (line, " ,");
             while (token != NULL) {
-                data_out[len_out] = (uint8_t)strtol(token, NULL, 16);
-                len_out ++;
+                data_read[len_read] = (uint8_t)strtol(token, NULL, 16);
+                len_read ++;
                 token = strtok (NULL, " ,");
             }
 
-            if (len_out > 0) {
+            if (len_read > 0) {
+
+                len_out = 0;
+                len_out += build_header(seq, 0x0100, 0x0000, 0x0001, data_out + 1);
+
+                for (int i = 0; i < len_read; i++) {
+                    data_out[len_out + i] = data_read[i];
+                }
+                len_out += len_read;
+                data_out[0] = len_out;
+
+                seq += 1;
+
+                printf("Output: ");
+                for (int i = 0; i < len_out; i++) {
+                    printf("%.2x ", data_out[i]);
+                }
+                printf("\r\n");
+
                 res = radio->start_tx(len_out, data_out);
                 if (res < 0) {
                     printf("Error %d starting send\r\n", res);
