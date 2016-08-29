@@ -66,6 +66,15 @@ public:
         return at86rf212_check_tx(&(this->device));
     }
 
+    int read_reg(uint8_t reg, uint8_t* val)
+    {
+        return at86rf212_read_reg(&(this->device), reg, val);
+    }
+    int write_reg(uint8_t reg, uint8_t val)
+    {
+        return at86rf212_write_reg(&(this->device), reg, val);
+    }
+
 private:
     struct at86rf212_s device;
 };

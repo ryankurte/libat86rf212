@@ -4,8 +4,12 @@
 #include "gmock/gmock.h"
 
 #include <stdint.h>
+#include <time.h>
 
 #include "at86rf212/at86rf212.hpp"
+#include "at86rf212/at86rf212_regs.h"
+#include "at86rf212/at86rf212_defs.h"
+
 #include "mock_spi.hpp"
 #include "usbthing/usbthing.h"
 #include "usbthing_bindings.h"
@@ -60,7 +64,7 @@ protected:
 
     // Disconnect from the USB-Thing
     res = USBTHING_disconnect(&usbthing);
-    EXPECT_EQ(0, res);
+    ASSERT_EQ(0, res);
 
     // Close USB-Thing static components
     USBTHING_close();
@@ -72,6 +76,44 @@ protected:
   At86rf212 radio;
 };
 
+TEST_F(At86rf212Test, InitialConfig)
+{
+  int res;
+  uint8_t val;
+
+  // Check default CCA mode
+  res = radio.read_reg(AT86RF212_REG_PHY_CC_CCA, &val);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(1, (val >> 5) & 0x03);
+
+  // Check default CSMA exponents
+  res = radio.read_reg(AT86RF212_REG_CSMA_BE, &val);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(AT86RF212_DEFAULT_MINBE, (val >> 0) & 0x0f);
+  ASSERT_EQ(AT86RF212_DEFAULT_MAXBE, (val >> 4) & 0x0f);
+
+  // Check default CSMA backoff
+  res = radio.read_reg(AT86RF212_REG_XAH_CTRL_0, &val);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(AT86RF212_DEFAULT_MAX_CSMA_BACKOFFS, (val >> 1) & 0x07);
+
+  // Check radio is in promiscuous mode
+  res = radio.read_reg(AT86RF212_REG_XAH_CTRL_1, &val);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(1, (val >> 1) & 0x01);
+
+  // Check auto CRC is enabled
+  res = radio.read_reg(AT86RF212_REG_TRX_CTRL_1, &val);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(1, (val >> 5) & 0x01);
+
+  // Check IRQ_MASK_MODE is set
+  res = radio.read_reg(AT86RF212_REG_TRX_CTRL_1, &val);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(1, (val >> 1) & 0x01);
+
+}
+
 TEST_F(At86rf212Test, SetState)
 {
   int res;
@@ -82,14 +124,14 @@ TEST_F(At86rf212Test, SetState)
 
   res = radio.get_state(&state);
   ASSERT_TRUE(res >= 0);
-  EXPECT_EQ(AT86RF212_CMD_RX_ON, state);
+  ASSERT_EQ(AT86RF212_CMD_RX_ON, state);
 
   res = radio.set_state(AT86RF212_CMD_TRX_OFF);
   ASSERT_TRUE(res >= 0);
 
   res = radio.get_state(&state);
   ASSERT_TRUE(res >= 0);
-  EXPECT_EQ(AT86RF212_CMD_TRX_OFF, state);
+  ASSERT_EQ(AT86RF212_CMD_TRX_OFF, state);
 }
 
 TEST_F(At86rf212Test, SetChannel)
@@ -102,15 +144,50 @@ TEST_F(At86rf212Test, SetChannel)
 
   res = radio.get_channel(&channel);
   ASSERT_TRUE(res >= 0);
-  EXPECT_EQ(10, channel);
+  ASSERT_EQ(10, channel);
 
   res = radio.set_channel(1);
   ASSERT_TRUE(res >= 0);
 
   res = radio.get_channel(&channel);
   ASSERT_TRUE(res >= 0);
-  EXPECT_EQ(1, channel);
+  ASSERT_EQ(1, channel);
 }
 
+//Frame Control Field + Seq No. + Address + security
+#define HEADER_SIZE       (2+1+(2+2+2)+0)
+#define SEND_TIMEOUT_S    2
+static uint8_t radio_header[HEADER_SIZE] = {0x61, 0x88, 0x05, 0x00, 0x01, 0x01, 0X01, 0x02, 0x02};
 
+
+TEST_F(At86rf212Test, Send)
+{
+  int res;
+  uint8_t channel = 0;
+
+  uint8_t data[HEADER_SIZE + 16];
+  for (int i = 0; i < HEADER_SIZE; i++) {
+    data[i] = radio_header[i];
+  }
+  for (int i = HEADER_SIZE; i < (HEADER_SIZE + 16); i++) {
+    data[i] = i;
+  }
+
+  data[0] = HEADER_SIZE + 16 - 1;
+
+  res = radio.start_tx(sizeof(data), data);
+  ASSERT_EQ(AT86RF212_RES_OK, res);
+
+  int start_time = time(NULL);
+
+  while (1) {
+    res = radio.check_tx();
+    if (res == 1) {
+      break;
+    }
+    if (time(NULL) > (start_time + 2)) {
+      ASSERT_TRUE(false);
+    }
+  }
+}
 
