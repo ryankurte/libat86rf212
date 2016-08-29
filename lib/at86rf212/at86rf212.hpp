@@ -66,6 +66,19 @@ public:
         return at86rf212_check_tx(&(this->device));
     }
 
+    int start_rx()
+    {
+        return at86rf212_start_rx(&(this->device));
+    }
+    int check_rx()
+    {
+        return at86rf212_check_rx(&(this->device));
+    }
+    int get_rx(uint8_t* length, uint8_t* data)
+    {
+        return at86rf212_get_rx(&(this->device), length, data);
+    }
+
     int read_reg(uint8_t reg, uint8_t* val)
     {
         return at86rf212_read_reg(&(this->device), reg, val);

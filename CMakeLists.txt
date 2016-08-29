@@ -25,33 +25,36 @@ include(${PROJECT_SOURCE_DIR}/lib/at86rf212.cmake)
 ##### Files #####
 
 # Add project headers
+include_directories(${PROJECT_SOURCE_DIR}/build)
 include_directories(${PROJECT_SOURCE_DIR}/test/include)
 include_directories(${PROJECT_SOURCE_DIR}/util/include)
 
 # Add project sources
 set(TEST_SOURCES
     ${PROJECT_SOURCE_DIR}/test/source/main.cpp
-    ${PROJECT_SOURCE_DIR}/test/source/usbthing_bindings.c
+    ${PROJECT_SOURCE_DIR}/util/source/usbthing_bindings.c
     ${PROJECT_SOURCE_DIR}/test/source/at86rf212test.cpp
 )
 
 set(UTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/util/source/main.cpp
+    ${PROJECT_SOURCE_DIR}/util/source/usbthing_bindings.c
 )
 
 ##### Pre Build #####
-add_custom_target(version ${PROJECT_SOURCE_DIR}/version.py LIBAT86RF212 ${CMAKE_BINARY_DIR}/version.h)
+add_custom_target(version ${PROJECT_SOURCE_DIR}/version.py LIBAT86RF212 ${CMAKE_BINARY_DIR}/at86rf212_version.h)
 include_directories(${CMAKE_BINARY_DIR})
 
 ##### Outputs #####
 
+# Build CLI tests and util (requires libusbthing and USB-Thing hardware)
+if(BUILD_CLI)
 # Built Tests
 add_executable(${TARGET}test ${TEST_SOURCES})
 target_link_libraries(${TARGET}test ${OPTIONAL_LIBS} usbthing pthread gmock)
 add_dependencies(${TARGET}test version)
 
-# Build Util (requires libusbthing and USB-Thing hardware).
-if(BUILD_UTIL)
+# Build Util
 add_executable(${TARGET}util ${UTIL_SOURCES})
 target_link_libraries(${TARGET}util ${OPTIONAL_LIBS} usbthing pthread)
 add_dependencies(${TARGET}util version)

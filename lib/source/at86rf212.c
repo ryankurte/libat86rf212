@@ -401,8 +401,48 @@ int at86rf212_set_pan_id(struct at86rf212_s *device, uint16_t pan_id)
 int at86rf212_start_rx(struct at86rf212_s *device)
 {
     int res;
+    uint8_t irq, status;
 
     // TODO: ensure PLL is enabled
+
+    // Reset state
+    res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TRX_OFF);
+    if (res < 0) {
+        AT86RF212_DEBUG_PRINT("Timeout setting TRX OFF state\r\n");
+        return res;
+    }
+
+    PLATFORM_SLEEP_US(1);
+
+    // Clear interrupts
+    res = at86rf212_get_irq_status(device, &irq);
+    if (res < 0) {
+        return res;
+    }
+
+    // Enable PLL
+    res = at86rf212_set_state_blocking(device, AT86RF212_CMD_PLL_ON);
+    if (res < 0) {
+        AT86RF212_DEBUG_PRINT("Timeout setting PLL ON state\r\n");
+        return res;
+    }
+
+    // Await PLL lock
+    for (int i = 0; i < AT86RF212_PLL_LOCK_RETRIES; i++) {
+        res = at86rf212_get_irq_status(device, &irq);
+        if (res < 0) {
+            return res;
+        }
+        if ((irq & AT86RF212_IRQ_STATUS_IRQ_0_PLL_LOCK_MASK) != 0) {
+            break;
+        }
+        PLATFORM_SLEEP_US(1);
+    }
+
+    if ((irq & AT86RF212_IRQ_STATUS_IRQ_0_PLL_LOCK_MASK) == 0) {
+        AT86RF212_DEBUG_PRINT("Timeout awaiting PLL lock (IRQ status: 0x%x)\r\n", irq);
+        return AT86RF212_ERROR_PLL;
+    }
 
     // Enable RX mode
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_RX_ON);
@@ -424,13 +464,13 @@ int at86rf212_check_rx(struct at86rf212_s *device)
     }
 
     if ((irq & AT86RF212_IRQ_STATUS_IRQ_3_TRX_END_MASK) != 0) {
-        return 1;
+        return AT86RF212_RES_DONE;
     }
 
     return AT86RF212_RES_OK;
 }
 
-int at86rf212_get_rx(struct at86rf212_s *device)
+int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data)
 {
     int res;
     uint8_t buffer[AT86RF212_MAX_LENGTH];
@@ -453,6 +493,8 @@ int at86rf212_get_rx(struct at86rf212_s *device)
     // Read frame from buffer
     res = at86rf212_read_frame(device, AT86RF212_LEN_FIELD_LEN + frame_len, buffer);
 
+    // TODO: copy buffer out
+
     return res;
 }
 
@@ -471,7 +513,7 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
         return res;
     }
 
-    PLATFORM_SLEEP_MS(1);
+    PLATFORM_SLEEP_US(1);
 
     // Clear interrupts
     res = at86rf212_get_irq_status(device, &irq);
@@ -519,13 +561,14 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
     }
 #endif
 
+#if 1
+    // Send command to start transmission
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TX_START);
     if (res < 0) {
         AT86RF212_DEBUG_PRINT("Timeout setting TRX_START\r\n");
         return res;
     }
-
-#if 0
+#else
     // Assert SLP_TR pin to trigger transmission
     device->driver->set_slp_tr(device->driver_ctx, 1);
     PLATFORM_SLEEP_MS(1);

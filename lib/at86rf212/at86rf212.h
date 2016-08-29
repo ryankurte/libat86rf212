@@ -68,6 +68,11 @@ int at86rf212_get_irq_status(struct at86rf212_s *device, uint8_t *status);
 int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data);
 int at86rf212_check_tx(struct at86rf212_s *device);
 
+
+int at86rf212_start_rx(struct at86rf212_s *device);
+int at86rf212_check_rx(struct at86rf212_s *device);
+int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data);
+
 int at86rf212_read_reg(struct at86rf212_s *device, uint8_t reg, uint8_t* val);
 int at86rf212_write_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val);
 int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t mask, uint8_t val);

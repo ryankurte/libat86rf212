@@ -195,3 +195,13 @@ TEST_F(At86rf212Test, Send)
   }
 }
 
+TEST_F(At86rf212Test, ReceiveMode)
+{
+  int res;
+  
+  res = radio.start_rx();
+  ASSERT_EQ(AT86RF212_RES_OK, res);
+
+
+}
+
