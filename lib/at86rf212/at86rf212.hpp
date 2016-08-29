@@ -36,6 +36,14 @@ public:
     {
         return at86rf212_close(&(this->device));
     }
+    int set_short_address(uint16_t address)
+    {
+        return at86rf212_set_short_address(&(this->device), address);
+    }
+    int set_pan_id(uint16_t pan_id)
+    {
+        return at86rf212_set_pan_id(&(this->device), pan_id);
+    }
 
     int set_state(uint8_t state)
     {

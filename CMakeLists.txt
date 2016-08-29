@@ -56,7 +56,7 @@ add_dependencies(${TARGET}test version)
 
 # Build Util
 add_executable(${TARGET}util ${UTIL_SOURCES})
-target_link_libraries(${TARGET}util ${OPTIONAL_LIBS} usbthing pthread)
+target_link_libraries(${TARGET}util ${OPTIONAL_LIBS} usbthing pthread readline)
 add_dependencies(${TARGET}util version)
 endif()
 

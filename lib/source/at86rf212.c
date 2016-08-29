@@ -280,9 +280,9 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
         return AT86RF212_ERROR_DRIVER;
     }
 
-    res = at86rf212_set_short_address(device, 0xcafe);
+    //res = at86rf212_set_short_address(device, 0xcafe);
 
-    res = at86rf212_set_pan_id(device, 0x0100);
+    //res = at86rf212_set_pan_id(device, 0x0100);
 
     return AT86RF212_RES_OK;
 }

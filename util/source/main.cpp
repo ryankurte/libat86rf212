@@ -6,6 +6,9 @@
 #include <math.h>
 #include <getopt.h>
 #include <string.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+
 
 enum mode_e {
     MODE_RX,
@@ -13,9 +16,9 @@ enum mode_e {
 };
 
 struct config_s {
-    int verbose;
     int mode;
     int channel;
+    int help;
     uint16_t address;
     uint16_t pan_id;
 };
@@ -39,6 +42,85 @@ void int_handler(int dummy)
     running = 0;
 }
 
+void run_rx(AT86RF212::At86rf212* radio)
+{
+    int res;
+    uint8_t len_in;
+    uint8_t data_in[128];
+
+    res = radio->start_rx();
+    if (res < 0) {
+        printf("Error %d starting receive\r\n", res);
+    }
+
+    while (running) {
+        res = radio->check_rx();
+
+        if (res < 0) {
+            printf("Error %d checking receive\r\n", res);
+            break;
+        } else if (res > 0) {
+            printf("Received packet\r\n");
+
+            res = radio->get_rx(&len_in, data_in);
+            if (res < 0) {
+                printf("Error %d fetching received packet\r\n", res);
+            }
+
+            radio->start_rx();
+        }
+    }
+}
+
+void run_tx(AT86RF212::At86rf212* radio)
+{
+    uint8_t data_out[127];
+    uint8_t len_out = 0;
+    int res;
+
+    printf("Interactive transmit mode, type 'exit' to exit\r\n");
+
+    while (running) {
+        char* line = readline(">");
+
+        if (line != NULL) {
+            if (strncmp(line, "exit", 4) == 0) {
+                break;
+            }
+
+            char* token = strtok (line, " ,");
+            while (token != NULL) {
+                data_out[len_out] = (uint8_t)strtol(token, NULL, 16);
+                len_out ++;
+                token = strtok (NULL, " ,");
+            }
+
+            if (len_out > 0) {
+                res = radio->start_tx(len_out, data_out);
+                if (res < 0) {
+                    printf("Error %d starting send\r\n", res);
+                    break;
+                }
+
+                while (1) {
+                    res = radio->check_tx();
+                    if (res < 0) {
+                        printf("Error %d checking send\r\n", res);
+                        break;
+                    } else if (res > 0) {
+                        printf("Send complete\r\n");
+                        break;
+                    }
+                }
+            }
+
+            add_history(line);
+            free(line);
+            len_out = 0;
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     int res;
@@ -52,17 +134,23 @@ int main(int argc, char** argv)
     at86rf212_driver.get_irq = get_irq;
 
     usbthing_t usbthing;
+    AT86RF212::At86rf212 radio = AT86RF212::At86rf212();
+
     char version[32];
 
-    parse_args(argc, argv, &config);
+    // Parse command line arguments
+    res = parse_args(argc, argv, &config);
+    if (res < 0) {
+        return 0;
+    }
+
+    // Ensure mode is valid
     if (config.mode < 0) {
         printf("--mode argument is required\r\n");
         print_help(argc, argv);
         return 0;
     }
 
-    // Create the MPU device
-    AT86RF212::At86rf212 radio = AT86RF212::At86rf212();
 
     // Initialise USB-Thing static components
     USBTHING_init();
@@ -85,19 +173,25 @@ int main(int argc, char** argv)
     USBTHING_gpio_configure(usbthing, 1, 1, 0, 0);
     USBTHING_gpio_configure(usbthing, 2, 0, 0, 0);
 
-    printf("Connected to USB-Thing\r\n");
 
-    // Connect to and configure MPU
+    // Connect to and configure radio
     res = radio.init(&at86rf212_driver, (void*) &usbthing);
     if (res < 0) {
         printf("Error %d initialising AT86RF212\r\n", res);
         goto end;
     }
 
-    printf("Radio initialised\r\n");
+    res = radio.set_short_address(config.address);
+    if (res < 0) {
+        printf("Error %d setting address\r\n", res);
+        goto end;
+    }
 
-    // Bind signal handler to exit
-    signal(SIGINT, int_handler);
+    res = radio.set_pan_id(config.pan_id);
+    if (res < 0) {
+        printf("Error %d setting pan_id\r\n", res);
+        goto end;
+    }
 
     res = radio.set_channel(config.channel);
     if (res < 0) {
@@ -105,42 +199,23 @@ int main(int argc, char** argv)
         goto end;
     }
 
-    uint8_t len_in;
-    uint8_t data_in[128];
+
+    // Bind signal handler to exit
+    signal(SIGINT, int_handler);
+
+
+
 
     switch (config.mode) {
     case MODE_RX:
-        res = radio.start_rx();
-        if (res < 0) {
-            printf("Error %d starting receive\r\n", res);
-        }
-
-        while (running) {
-            res = radio.check_rx();
-
-            if (res < 0) {
-                printf("Error %d checking receive\r\n", res);
-                break;
-            } else if (res > 0) {
-                printf("Received packet\r\n");
-
-                res = radio.get_rx(&len_in, data_in);
-                if (res < 0) {
-                    printf("Error %d fetching received packet\r\n", res);
-                }
-
-                radio.start_rx();
-            }
-        }
-
+        run_rx(&radio);
         break;
     case MODE_TX:
-
+        run_tx(&radio);
         break;
     }
 
 end:
-
     printf("Exiting\r\n");
 
     radio.close();
@@ -160,11 +235,8 @@ end:
 
 int print_help (int argc, char **argv)
 {
-    printf("AT86RF212B Util\r\n");
-    printf("AT86RF212B Library Version: %s\r\n", LIBAT86RF212_VERSION_STRING);
-
-    printf("Usage:\r\n");
-    printf("%s --mode=[rx|tx] --channel=N\r\n", argv[0]);
+    printf("at86rf212b-util (%s)\r\n", LIBAT86RF212_VERSION_STRING);
+    printf("Usage: %s --mode=[rx|tx] [--channel=N --verbose]\r\n", argv[0]);
 
     printf("\r\n");
     return 0;
@@ -182,12 +254,12 @@ int parse_args (int argc, char **argv, struct config_s *config)
 
     static struct option long_options[] = {
         /* These options set a flag. */
-        {"verbose", no_argument,        &config->verbose,  1},
         {"mode",    required_argument,  0,              'm'},
         {"channel", required_argument,  0,              'c'},
         {"address", required_argument,  0,              'a'},
         {"pan",     required_argument,  0,              'p'},
         {"help",    no_argument,        0,              'h'},
+        {"version", no_argument,        0,              'v'},
         {0,         0,                  0,              0}
     };
     /* getopt_long stores the option index here. */
@@ -217,6 +289,7 @@ int parse_args (int argc, char **argv, struct config_s *config)
                 printf("transmit mode\r\n");
             } else {
                 printf("Unrecognised mode: %s\r\n", optarg);
+                return -1;
             }
             break;
 
@@ -230,9 +303,14 @@ int parse_args (int argc, char **argv, struct config_s *config)
             printf ("pan_id: %d\r\n", config->pan_id);
             break;
 
+        case 'v':
+            printf("%s\r\n", LIBAT86RF212_VERSION_STRING);
+            return -1;
+
         case 'h':
         case '?':
             print_help(argc, argv);
+            return -1;
             break;
 
         default:
