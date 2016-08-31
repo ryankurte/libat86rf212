@@ -611,6 +611,18 @@ int at86rf212_check_tx(struct at86rf212_s *device)
     int res;
     uint8_t irq;
 
+#if 0
+    // TODO: if IRQ pin is enabled can poll or interrupt on this.
+    // This code should however be in the application, not the driver
+    res = device->driver->get_irq(device->driver_ctx, &irq);
+    if(res < 0) {
+        return AT86RF212_ERROR_DRIVER;
+    }
+    if(irq == 0) {
+        return AT86RF212_RES_OK;
+    }
+#endif
+
     res = at86rf212_read_reg(device, AT86RF212_REG_IRQ_STATUS, &irq);
     if (res < 0) {
         return AT86RF212_ERROR_DRIVER;
