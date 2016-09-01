@@ -12,7 +12,7 @@
 
 #include "at86rf212/at86rf212_regs.h"
 
-#define DEBUG_AT86RF212
+//#define DEBUG_AT86RF212
 
 // Automagically define PLATFORM_SLEEP_MS and _US on unix-like platforms
 #ifndef PLATFORM_SLEEP_MS
@@ -502,7 +502,7 @@ int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data)
         return AT86RF212_ERROR_DRIVER;
     }
 
-    printf("Frame length: %d\r\n", frame_len);
+    AT86RF212_DEBUG_PRINT("Frame length: %d\r\n", frame_len);
 
     // Check frame length is valid
     if (frame_len > AT86RF212_MAX_LENGTH) {
