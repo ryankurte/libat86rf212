@@ -21,7 +21,9 @@
 #define PLATFORM_SLEEP_MS(a)    usleep(a * 1000);
 #define PLATFORM_SLEEP_US(a)    usleep(a);
 #else
-#error "PLATFORM_SLEEP_MS undefined and platform not recognised"
+#warning "PLATFORM_SLEEP_MS undefined and platform not recognised"
+#define PLATFORM_SLEEP_MS(a) for (volatile uint32_t i = 0; i < 1000000; i++);
+#define PLATFORM_SLEEP_US(a) for (volatile uint32_t i = 0; i < 1000; i++);
 #endif
 
 #endif
@@ -130,7 +132,6 @@ static int at86rf212_write_frame(struct at86rf212_s *device, uint8_t length, uin
 {
     uint8_t data_out[length + 1];
     uint8_t data_in[length + 1];
-    int res;
 
     data_out[0] = AT86RF212_FRAME_READ_FLAG;
     for (int i = 0; i < length; i++) {
@@ -409,8 +410,6 @@ int at86rf212_set_pan_id(struct at86rf212_s *device, uint16_t pan_id)
 
 int at86rf212_set_power_raw(struct at86rf212_s *device, uint8_t power)
 {
-    int res;
-
     return at86rf212_update_reg(device, AT86RF212_REG_PHY_TX_PWR,
                                 AT86RF212_PHY_TX_PWR_TX_PWR_MASK,
                                 power << AT86RF212_PHY_TX_PWR_TX_PWR_SHIFT);
@@ -419,7 +418,7 @@ int at86rf212_set_power_raw(struct at86rf212_s *device, uint8_t power)
 int at86rf212_start_rx(struct at86rf212_s *device)
 {
     int res;
-    uint8_t irq, status;
+    uint8_t irq;
 
     // TODO: ensure PLL is enabled
 
@@ -525,7 +524,6 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
 {
     int res;
     uint8_t irq;
-    uint8_t state;
 
     uint8_t send_data[AT86RF212_MAX_LENGTH];
 
