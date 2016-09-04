@@ -514,7 +514,7 @@ int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data)
         return AT86RF212_ERROR_DRIVER;
     }
 
-    printf("Frame length: %d\r\n", frame_len);
+    AT86RF212_DEBUG_PRINT("Frame length: %d\r\n", frame_len);
 
     // Check frame length is valid
     if (frame_len > AT86RF212_MAX_LENGTH) {
@@ -586,8 +586,10 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
     for (int i = 0; i < length; i++) {
         send_data[i + 1] = data[i];
     }
+    send_data[length + 1] = 0x00;
+    send_data[length + 2] = 0x00;
 
-#if 1
+#if 0
     printf("send data: ");
     for(int i=0; i<length + 1; i++) {
         printf("%.2x ", send_data[i]);
@@ -597,7 +599,7 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
 
     // Write frame to device
     // Note that data[0] must be length - AT86RF212_LEN_FIELD_LEN
-    res = at86rf212_write_frame(device, length + 1, send_data);
+    res = at86rf212_write_frame(device, length + AT86RF212_LEN_FIELD_LEN + AT86RF212_CRC_LEN, send_data);
     if (res < 0) {
         return res;
     }
