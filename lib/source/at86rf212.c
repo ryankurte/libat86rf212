@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <string.h>
 
 #include "at86rf212/at86rf212_regs.h"
 
@@ -26,6 +27,9 @@
 #define PLATFORM_SLEEP_US(a) for (volatile uint32_t i = 0; i < 1000; i++);
 #endif
 
+#else
+extern void PLATFORM_SLEEP_MS(uint32_t);
+extern void PLATFORM_SLEEP_US(uint32_t);
 #endif
 
 // Wrap debug outputs
@@ -498,7 +502,7 @@ int at86rf212_check_rx(struct at86rf212_s *device)
 int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data)
 {
     int res;
-    uint8_t buffer[AT86RF212_MAX_LENGTH];
+    uint8_t buffer[AT86RF212_LEN_FIELD_LEN + AT86RF212_MAX_LENGTH + AT86RF212_FRAME_RX_OVERHEAD];
 
     // Check CRC
     // AT86RF212_REG_PHY_RSSI & 0x80 != 0
@@ -518,11 +522,14 @@ int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data)
     }
 
     // Read frame from buffer
-    res = at86rf212_read_frame(device, AT86RF212_LEN_FIELD_LEN + frame_len, buffer);
+    res = at86rf212_read_frame(device, AT86RF212_LEN_FIELD_LEN + frame_len + AT86RF212_FRAME_RX_OVERHEAD, buffer);
 
-    // TODO: copy buffer out
+    // Copy buffer out
+    // TODO: should we parse the additional fields here or outside of this function?
+    *length = frame_len + AT86RF212_FRAME_RX_OVERHEAD;
+    memcpy(data, buffer + 1, frame_len + AT86RF212_FRAME_RX_OVERHEAD);
 
-    // TODO: clear buffer
+    // TODO: clear buffer?
 
 
     return res;
@@ -574,6 +581,7 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
         return AT86RF212_ERROR_PLL;
     }
 
+    // Create data frame for writing
     send_data[0] = length;
     for (int i = 0; i < length; i++) {
         send_data[i + 1] = data[i];
@@ -587,7 +595,7 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
     }
 
 #if 0
-//TODO: not currently using auto mode
+    //TODO: not currently using auto ack mode
     res = at86rf212_set_state_blocking(device, AT86RF212_CMD_TX_ARET_ON);
     if (res < 0) {
         AT86RF212_DEBUG_PRINT("Timeout setting TX_ARET_ON\r\n", irq);
@@ -621,10 +629,10 @@ int at86rf212_check_tx(struct at86rf212_s *device)
     // TODO: if IRQ pin is enabled can poll or interrupt on this.
     // This code should however be in the application, not the driver
     res = device->driver->get_irq(device->driver_ctx, &irq);
-    if(res < 0) {
+    if (res < 0) {
         return AT86RF212_ERROR_DRIVER;
     }
-    if(irq == 0) {
+    if (irq == 0) {
         return AT86RF212_RES_OK;
     }
 #endif

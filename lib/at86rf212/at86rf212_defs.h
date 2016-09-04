@@ -18,9 +18,10 @@ extern "C" {
 #define AT86RF212_SRAM_WRITE_FLAG    (0x40)
 #define AT86RF212_SRAM_READ_FLAG     (0x00)
 
-#define AT86RF212_MAX_LENGTH         (127)
-#define AT86RF212_LEN_FIELD_LEN      1
-#define AT86RF212_CRC_LEN            2
+#define AT86RF212_MAX_LENGTH         (127)  //!< Maximum packet length
+#define AT86RF212_LEN_FIELD_LEN      1      //!< Length of the PDSU length field
+#define AT86RF212_CRC_LEN            2      //!< Length of the CRC field
+#define AT86RF212_FRAME_RX_OVERHEAD  3      //!< Number of additional bytes read from frame buffer on RX
 
 /** Enumerations */
 
