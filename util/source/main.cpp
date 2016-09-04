@@ -72,7 +72,7 @@ void run_rx(AT86RF212::At86rf212* radio)
     }
 }
 
-int build_header(uint8_t seq, uint16_t pan, uint16_t dest_addr, uint16_t src_addr, uint8_t* data)
+int build_header(uint8_t seq, uint16_t pan, uint16_t dest_addr, uint16_t src_addr, uint8_t* packet)
 {
     uint8_t header[9];
 
@@ -87,10 +87,18 @@ int build_header(uint8_t seq, uint16_t pan, uint16_t dest_addr, uint16_t src_add
     header[8] = (src_addr >> 8) & 0xFF;
 
     for (int i = 0; i < sizeof(header); i++) {
-        data[i] = header[i];
+        packet[i] = header[i];
     }
 
     return sizeof(header);
+}
+
+int add_data(int len, uint8_t* data_in, uint8_t* packet)
+{
+    for (int i = 0; i < len; i++) {
+        packet[i] = data_in[i];
+    }
+    return len;
 }
 
 //0b 61 88 05 00 01 01 01 02 02 80 01
@@ -124,14 +132,11 @@ void run_tx(AT86RF212::At86rf212* radio)
 
             if (len_read > 0) {
 
-                len_out = 0;
-                len_out += build_header(seq, 0x0100, 0x0000, 0x0001, data_out + 1);
-
+                len_out = build_header(seq, 0x0100, 0x0000, 0x0001, data_out);
                 for (int i = 0; i < len_read; i++) {
                     data_out[len_out + i] = data_read[i];
                 }
                 len_out += len_read;
-                data_out[0] = len_out;
 
                 seq += 1;
 
@@ -160,6 +165,7 @@ void run_tx(AT86RF212::At86rf212* radio)
             }
 
             free(line);
+            len_read = 0;
             len_out = 0;
         }
     }
