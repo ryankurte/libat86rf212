@@ -338,7 +338,15 @@ int at86rf212_set_state_blocking(struct at86rf212_s *device, uint8_t state)
 
 int at86rf212_get_state(struct at86rf212_s *device, uint8_t *state)
 {
-    return at86rf212_read_reg(device, AT86RF212_REG_TRX_STATE, state);
+    int res;
+    uint8_t state_int;
+
+    res = at86rf212_read_reg(device, AT86RF212_REG_TRX_STATE, &state_int);
+    //TODO: Should we be masking here to only fetch TRX_STATUS or externally so you can also
+    // use CCA_STATUS and CCA_DONE? (OR passing additional args for each).
+    (*state) = state_int & AT86RF212_TRX_STATUS_TRX_STATUS_MASK;
+
+    return res;
 }
 
 
