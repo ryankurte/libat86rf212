@@ -137,7 +137,7 @@ static int at86rf212_write_frame(struct at86rf212_s *device, uint8_t length, uin
     uint8_t data_out[length + 1];
     uint8_t data_in[length + 1];
 
-    data_out[0] = AT86RF212_FRAME_READ_FLAG;
+    data_out[0] = AT86RF212_FRAME_WRITE_FLAG;
     for (int i = 0; i < length; i++) {
         data_out[i + 1] = data[i];
     }
@@ -587,7 +587,7 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
         send_data[i + 1] = data[i];
     }
 
-#if 0
+#if 1
     printf("send data: ");
     for(int i=0; i<length + 1; i++) {
         printf("%.2x ", send_data[i]);
