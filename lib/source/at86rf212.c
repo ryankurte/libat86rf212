@@ -589,14 +589,6 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
     send_data[length + 1] = 0x00;
     send_data[length + 2] = 0x00;
 
-#if 0
-    printf("send data: ");
-    for(int i=0; i<length + 1; i++) {
-        printf("%.2x ", send_data[i]);
-    }
-    printf("\r\n");
-#endif
-
     // Write frame to device
     // Note that data[0] must be length - AT86RF212_LEN_FIELD_LEN
     res = at86rf212_write_frame(device, length + AT86RF212_LEN_FIELD_LEN + AT86RF212_CRC_LEN, send_data);

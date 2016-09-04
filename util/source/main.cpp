@@ -132,6 +132,7 @@ void run_tx(AT86RF212::At86rf212* radio)
 
             if (len_read > 0) {
 
+                // TODO: build header only if configured
                 len_out = build_header(seq, 0x0100, 0x0000, 0x0001, data_out);
                 for (int i = 0; i < len_read; i++) {
                     data_out[len_out + i] = data_read[i];
