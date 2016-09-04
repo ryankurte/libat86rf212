@@ -60,12 +60,17 @@ void run_rx(AT86RF212::At86rf212* radio)
             printf("Error %d checking receive\r\n", res);
             break;
         } else if (res > 0) {
-            printf("Received packet\r\n");
 
             res = radio->get_rx(&len_in, data_in);
             if (res < 0) {
                 printf("Error %d fetching received packet\r\n", res);
             }
+
+            printf("RX: ");
+            for (int i = 0; i < len_in; i++) {
+                printf("%.2x ", data_in[i]);
+            }
+            printf("\r\n");
 
             radio->start_rx();
         }
