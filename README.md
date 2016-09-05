@@ -16,11 +16,14 @@ The above functions should return >= 0 for success, < 0 for failure. For an exam
 
 ## Status
 
-Early WIP. No (useful) functionality yet.
+Early WIP. Initialisation, basic send and receive functionality working, still far from feature complete.
 
 - [X] Register operations
 - [X] Initialisation
-- [X] Polling 
+- [X] Polling
+- [X] Simple Send
+- [X] Simple Receive
+- [ ] Packet building & parsing
 - [ ] Interrupt Mode
 - [ ] DMA support
 
