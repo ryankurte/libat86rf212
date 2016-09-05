@@ -1,3 +1,9 @@
+/*
+ * at86rf212 example util
+ * Uses a usb-thing to interact with an atmel radio module
+ *
+ * Copyright 2016 Ryan Kurte
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,12 +15,24 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include "usbthing/usbthing.h"
+#include "usbthing_bindings.h"
 
+#include "at86rf212/at86rf212.hpp"
+#include "at86rf212_version.h"
+
+
+#define DEFAULT_VID     0x0001
+#define DEFAULT_PID     0x0001
+
+
+// Utility operating mode
 enum mode_e {
     MODE_RX,
     MODE_TX
 };
 
+// Utility configuration
 struct config_s {
     int mode;
     int channel;
@@ -23,20 +41,14 @@ struct config_s {
     uint16_t pan_id;
 };
 
-#include "usbthing/usbthing.h"
-#include "usbthing_bindings.h"
-
-#include "at86rf212/at86rf212.hpp"
-#include "at86rf212_version.h"
-
-#define DEFAULT_VID     0x0001
-#define DEFAULT_PID     0x0001
-
+// Prototypes
 int parse_args (int argc, char **argv, struct config_s *config);
 int print_help (int argc, char **argv);
 
+// Globals
 static volatile int running = 1;
 
+// Functions
 void int_handler(int dummy)
 {
     running = 0;
