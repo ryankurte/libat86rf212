@@ -25,7 +25,7 @@ public:
     }
 
     // Init using C++ style driver interface
-    int init(SpiDriverInterface* driver_ctx)
+    int init(At86rf212DriverInterface* driver_ctx)
     {
         struct at86rf212_driver_s *driver = SpiDriverWrapper::GetWrapper();
         return at86rf212_init(&(this->device), driver, (void*)driver_ctx);
