@@ -7,7 +7,7 @@
 
 #include "at86rf212/at86rf212_if.hpp"
 
-class MockSpi : public AT86RF212::At86rf212DriverInterface
+class MockSpi : public AT86RF212::DriverInterface
 {
 public:
     MOCK_METHOD3(spi_transfer, int(int len, uint8_t* data_out, uint8_t *data_in));

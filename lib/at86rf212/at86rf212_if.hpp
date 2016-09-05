@@ -13,7 +13,7 @@ namespace AT86RF212
 {
 
 // SPI driver interface class
-class At86rf212DriverInterface
+class DriverInterface
 {
 public:
     virtual int spi_transfer(int len, uint8_t *data_out, uint8_t* data_in) = 0;
@@ -25,32 +25,32 @@ public:
 // Adaptor functions, allows c++ object to be called from c(ish) context
 int at86rf212_transfer_data_adaptor(void* context, int len, uint8_t* data_out, uint8_t* data_in)
 {
-    At86rf212DriverInterface *driver = (At86rf212DriverInterface*) context;
+    AT86RF212::DriverInterface *driver = (AT86RF212::DriverInterface*) context;
     return driver->spi_transfer(len, data_out, data_in);
 }
 
 int at86rf212_set_sdn_adaptor(void* context, uint8_t val)
 {
-    At86rf212DriverInterface *driver = (At86rf212DriverInterface*) context;
+    AT86RF212::DriverInterface *driver = (AT86RF212::DriverInterface*) context;
     return driver->set_sdn(val);
 }
 
 int at86rf212_set_slp_tr_adaptor(void* context, uint8_t val)
 {
-    At86rf212DriverInterface *driver = (At86rf212DriverInterface*) context;
+    AT86RF212::DriverInterface *driver = (AT86RF212::DriverInterface*) context;
     return driver->set_slp_tr(val);
 }
 
 int at86rf212_get_irq_adaptor(void* context, uint8_t* val)
 {
-    At86rf212DriverInterface *driver = (At86rf212DriverInterface*) context;
+    AT86RF212::DriverInterface *driver = (AT86RF212::DriverInterface*) context;
     return driver->get_irq(val);
 }
 
 // SPI Driver wrapper object
 // Adapts C++ driver object for use in C based library
 // Note that this can be static as driver context is passed separately to the driver
-class SpiDriverWrapper
+class DriverWrapper
 {
 public:
     static struct at86rf212_driver_s* GetWrapper()
@@ -62,7 +62,7 @@ private:
     static struct at86rf212_driver_s driver;
 };
 
-struct at86rf212_driver_s SpiDriverWrapper::driver = {
+struct at86rf212_driver_s DriverWrapper::driver = {
     at86rf212_transfer_data_adaptor,
     at86rf212_set_sdn_adaptor,
     at86rf212_set_slp_tr_adaptor,
