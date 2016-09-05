@@ -25,9 +25,10 @@ extern "C" {
 #define AT86RF212_CRC_LEN            2      //!< Length of the CRC field
 #define AT86RF212_FRAME_RX_OVERHEAD  3      //!< Number of additional bytes read from frame buffer on RX
 
+
 /** Enumerations */
 
-/** sub-register TRX_CMD in register TRX_STATE */
+// TRX commands
 enum at86rf212_trx_cmd_e {
     AT86RF212_CMD_NOP           = 0x00,   //!< No-op for reading SPI status (configurable)
     AT86RF212_CMD_TX_START      = 0x02,   //!< Start TX
@@ -42,7 +43,7 @@ enum at86rf212_trx_cmd_e {
 };
 
 
-/** sub-register TRX_STATUS in register TRX_STATUS */
+// TRX status
 enum at86rf212_tal_trx_status_e {
     AT86RF212_P_ON                          = 0x00,   //!< Constant P_ON for sub-register @ref SR_TRX_STATUS
     AT86RF212_BUSY_RX                       = 0x01,   //!< Busy receiving
@@ -61,55 +62,56 @@ enum at86rf212_tal_trx_status_e {
     AT86RF212_STATE_TRANSITION_IN_PROGRESS  = 0x1F,   //!< Currently changing states
 };
 
-/** sub-register TRAC_STATUS in register TRX_STATE */
+// TRAC Status (Advanced mode)
 enum at86rf212_trx_trac_status_e {
-    AT86RF212_TRAC_SUCCESS                 = 0,   //!< AACK or ARET successful
-    AT86RF212_TRAC_SUCCESS_DATA_PENDING    = 1,   //!< ARET ACK frame received with pending flag set
-    AT86RF212_TRAC_SUCCESS_WAIT_FOR_ACK    = 2,   //!< AACK ACK frame will be sent in nexta vailable slot
-    AT86RF212_TRAC_CHANNEL_ACCESS_FAILURE  = 3,   //!< Error accessing channel
-    AT86RF212_TRAC_NO_ACK                  = 5,   //!< NO ack received
-    AT86RF212_TRAC_INVALID                 = 7,   //!< Invalid state
+    AT86RF212_TRAC_SUCCESS                  = 0,   //!< AACK or ARET successful
+    AT86RF212_TRAC_SUCCESS_DATA_PENDING     = 1,   //!< ARET ACK frame received with pending flag set
+    AT86RF212_TRAC_SUCCESS_WAIT_FOR_ACK     = 2,   //!< AACK ACK frame will be sent in nexta vailable slot
+    AT86RF212_TRAC_CHANNEL_ACCESS_FAILURE   = 3,   //!< Error accessing channel
+    AT86RF212_TRAC_NO_ACK                   = 5,   //!< NO ack received
+    AT86RF212_TRAC_INVALID                  = 7,   //!< Invalid state
 };
 
-/** TAL states */
+// TAL states
 enum at86rf212_tal_state_e {
-    AT86RF212_TAL_IDLE = 0,
-    AT86RF212_TAL_TX_AUTO = 1,
-    AT86RF212_TAL_TX_END = 2
+    AT86RF212_TAL_IDLE                      = 0,
+    AT86RF212_TAL_TX_AUTO                   = 1,
+    AT86RF212_TAL_TX_END                    = 2
 };
 
-/** CCA Mode ***/
+// CCA Mode
 enum at86rf212_cca_mode_e {
-    AT86RF212_CCA_MODE_CS_OR_ENERGY = 0,    //!< Carrier sense OR energy above threshold
-    AT86RF212_CCA_MODE_ENERGY = 1,          //!< Energy above threshold
-    AT86RF212_CCA_MODE_CS = 2,              //!< Carrier sense
-    AT86RF212_CCA_MODE_CS_AND_ENERGY = 3    //!< Carrier sense AND energy above threshold
+    AT86RF212_CCA_MODE_CS_OR_ENERGY         = 0,    //!< Carrier sense OR energy above threshold
+    AT86RF212_CCA_MODE_ENERGY               = 1,    //!< Energy above threshold
+    AT86RF212_CCA_MODE_CS                   = 2,    //!< Carrier sense
+    AT86RF212_CCA_MODE_CS_AND_ENERGY        = 3     //!< Carrier sense AND energy above threshold
 };
 
-/** Modulation mode **/
+// Modulation mode
 enum at86rf212_modulation_e {
-    ATRF86212_MODULATION_BPSK = 0,          //!< BPSK modulation
-    ATRF86212_MODULATION_OQPSK = 2          //!< OQPSK modulation
+    ATRF86212_MODULATION_BPSK               = 0,    //!< BPSK modulation
+    ATRF86212_MODULATION_OQPSK              = 2     //!< OQPSK modulation
 };
 
-/** OQPSK Data Rate ***/
+// OQPSK Data Rate
 enum at86rf212_oqpsk_data_rate_e {
-    ATRF86212_OQPSK_DATA_RATE_0_100K_1_250K = 0,    //!< Data rate where SUB_MODE 0 100K, 1 250K
-    ATRF86212_OQPSK_DATA_RATE_0_200K_1_500K = 1,    //!< Data rate where SUB_MODE 0 200K, 1 500K
-    ATRF86212_OQPSK_DATA_RATE_0_400K_1_1000K = 2,   //!< Data rate where SUB_MODE 0 400K, 1 1000K
-    ATRF86212_OQPSK_DATA_RATE_0_NA_1_500K = 3       //!< Data rate where SUB_MODE 0 NA, 1 500K
+    ATRF86212_OQPSK_DATA_RATE_0_100K_1_250K     = 0,    //!< Data rate where SUB_MODE 0 100K, 1 250K
+    ATRF86212_OQPSK_DATA_RATE_0_200K_1_500K     = 1,    //!< Data rate where SUB_MODE 0 200K, 1 500K
+    ATRF86212_OQPSK_DATA_RATE_0_400K_1_1000K    = 2,    //!< Data rate where SUB_MODE 0 400K, 1 1000K
+    ATRF86212_OQPSK_DATA_RATE_0_NA_1_500K       = 3     //!< Data rate where SUB_MODE 0 NA, 1 500K
 };
 
+// IRQ flags
 enum at86rf212_irq_e {
-    AT86RF212_IRQ_NONE          = 0x00,
-    AT86RF212_IRQ_0_PLL_LOCK    = 0x01,
-    AT86RF212_IRQ_1_PLL_UNLOCK  = 0x02,
-    AT86RF212_IRQ_2_RX_START    = 0x04,
-    AT86RF212_IRQ_3_TRX_END     = 0x08,
-    AT86RF212_IRQ_4_CCA_ED_DONE = 0x10,
-    AT86RF212_IRQ_5_AMI         = 0x20,
-    AT86RF212_IRQ_6_TRX_UR      = 0x40,
-    AT86RF212_IRQ_7_BAT_LOW     = 0x80,
+    AT86RF212_IRQ_NONE                          = 0x00,
+    AT86RF212_IRQ_0_PLL_LOCK                    = 0x01,
+    AT86RF212_IRQ_1_PLL_UNLOCK                  = 0x02,
+    AT86RF212_IRQ_2_RX_START                    = 0x04,
+    AT86RF212_IRQ_3_TRX_END                     = 0x08,
+    AT86RF212_IRQ_4_CCA_ED_DONE                 = 0x10,
+    AT86RF212_IRQ_5_AMI                         = 0x20,
+    AT86RF212_IRQ_6_TRX_UR                      = 0x40,
+    AT86RF212_IRQ_7_BAT_LOW                     = 0x80,
 };
 
 enum at86rf212_clkm_rate_e {

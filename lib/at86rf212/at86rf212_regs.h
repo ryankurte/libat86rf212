@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 
-/** Base address for transceiver **/
+// Base addresses
 #define AT86RF212_REG_BASE_ADDR    (0x00)   //!< Register base address
 #define AT86RF212_AES_BASE_ADDR    (0x80)   //!< AES base address
 

@@ -298,6 +298,8 @@ int at86rf212_init(struct at86rf212_s *device, struct at86rf212_driver_s *driver
 
     res = at86rf212_set_power_raw(device, 0xC0);
 
+    device->open = 1;
+
     return AT86RF212_RES_OK;
 }
 
@@ -308,6 +310,8 @@ int at86rf212_close(struct at86rf212_s *device)
     // Clear driver pointer
     device->driver = NULL;
     device->driver_ctx = NULL;
+
+    device->open = 0;
 
     return AT86RF212_RES_OK;
 }
