@@ -1,5 +1,5 @@
 /*
- * at86rf212 9-DOF IMU driver
+ * at86rf212 ISM Band Radio IC driver
  *
  * Copyright 2016 Ryan Kurte
  */

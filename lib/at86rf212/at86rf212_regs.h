@@ -1,5 +1,5 @@
 /*
- * mpu9250 registers for internal library use
+ * at86rf212 registers for internal library use
  *
  * Copyright 2016 Ryan Kurte
  */
