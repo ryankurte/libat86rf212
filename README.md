@@ -24,6 +24,8 @@ Early WIP. Initialisation, basic send and receive functionality working, still f
 - [X] Simple Send
 - [X] Simple Receive
 - [ ] Packet building & parsing
+- [ ] Auto ACK
+- [ ] Auto Retransmit
 - [ ] Interrupt Mode
 - [ ] DMA support
 
