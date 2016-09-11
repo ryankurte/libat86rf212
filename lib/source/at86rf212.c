@@ -582,7 +582,7 @@ int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data
     }
 
     // Create data frame for writing
-    send_data[0] = length;
+    send_data[0] = length + AT86RF212_CRC_LEN;
     for (int i = 0; i < length; i++) {
         send_data[i + 1] = data[i];
     }
