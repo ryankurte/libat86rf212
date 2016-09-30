@@ -15,17 +15,18 @@
 extern "C" {
 #endif
 
+// Result enumeration, returned by all methods
 enum at86rf212_result_e {
-    AT86RF212_RES_OK = 0,
-    AT86RF212_RES_DONE = 1,
-    AT86RF212_DRIVER_INVALID = -1,
-    AT86RF212_ERROR_DRIVER = -2,
-    AT86RF212_ERROR_COMMS = -3,
-    AT86RF212_ERROR_LEN = -4,
-    AT86RF212_ERROR_RETRIES = -5,
-    AT86RF212_ERROR_PLL = -6,
-    AT86RF212_ERROR_DVDD = -7,
-    AT86RF212_ERROR_AVDD = -8
+    AT86RF212_RES_OK = 0,          //!< Indicates success
+    AT86RF212_RES_DONE = 1,        //!< Indicates completion
+    AT86RF212_DRIVER_INVALID = -1, //!< Invalid driver object
+    AT86RF212_ERROR_DRIVER = -2,   //!< Driver returned error (TODO: allow reporting of driver error code)
+    AT86RF212_ERROR_COMMS = -3,    //!< Communication error (SPI failure)
+    AT86RF212_ERROR_LEN = -4,      //!< Length error (mismatch or length exceeds allowable)
+    AT86RF212_ERROR_RETRIES = -5,  //!< Command failed after AT86RF212_MAX_RETRIES
+    AT86RF212_ERROR_PLL = -6,      //!< PLL locking error
+    AT86RF212_ERROR_DVDD = -7,     //!< Digital voltage error
+    AT86RF212_ERROR_AVDD = -8      //!< Analogue voltage error
 };
 
 // SPI interaction function for dependency injection

@@ -7,6 +7,10 @@
 
 //#define DEBUG_INTERCEPT_SPI
 
+#ifdef DEBUG_INTERCEPT_SPI
+#include <stdio.h>
+#endif
+
 // SPI transfer binding
 int spi_transfer(void* context, int len, uint8_t *data_out, uint8_t* data_in)
 {
