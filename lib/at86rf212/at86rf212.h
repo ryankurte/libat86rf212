@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 
+// AT86RF212 internal type definitions
 #include "at86rf212_defs.h"
 
 #ifdef __cplusplus
