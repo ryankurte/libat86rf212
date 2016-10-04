@@ -73,17 +73,29 @@ int at86rf212_set_irq_mask(struct at86rf212_s *device, uint8_t mask);
 int at86rf212_get_irq_status(struct at86rf212_s *device, uint8_t *status);
 
 // Transmit functions
+    
+// Start packet transmission
 int at86rf212_start_tx(struct at86rf212_s *device, uint8_t length, uint8_t* data);
+// Check for transmission complete
+// Returns at86rf212_result_e, values: AT86RF212_RES_DONE when complete, AT86RF212_RES_OK while transmitting
 int at86rf212_check_tx(struct at86rf212_s *device);
 
 // Receive functions
+    
+// Enter receive mode
 int at86rf212_start_rx(struct at86rf212_s *device);
+// Check for packet receipt
+// Returns at86rf212_result_e, values: AT86RF212_RES_DONE when packet has been received, AT86RF212_RES_OK otherwise
 int at86rf212_check_rx(struct at86rf212_s *device);
+// Fetch a received packet from the radio
 int at86rf212_get_rx(struct at86rf212_s *device, uint8_t* length, uint8_t* data);
 
 // Register functions
+// Read a value from a device register
 int at86rf212_read_reg(struct at86rf212_s *device, uint8_t reg, uint8_t* val);
+// Write a value to a device register
 int at86rf212_write_reg(struct at86rf212_s *device, uint8_t reg, uint8_t val);
+// Update a particular masked value in a device register
 int at86rf212_update_reg(struct at86rf212_s *device, uint8_t reg, uint8_t mask, uint8_t val);
 
 #ifdef __cplusplus
