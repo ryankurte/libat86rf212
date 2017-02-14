@@ -1,6 +1,6 @@
 # libat86rf212
 
-A Dependency Injection based SPI Driver library for the at86rf212 Digital Radio IC from Atmel.  
+A Dependency Injection based SPI Driver library for the at86rf212 Digital Radio IC from Atmel, designed as an alternative to [ARMmbed/atmel-rf-driver](https://github.com/ARMmbed/atmel-rf-driver) for non-mbed users.
 This is a work in progress, see Status for more information.
 
 ## Usage
