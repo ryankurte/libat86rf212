@@ -29,6 +29,22 @@ Early WIP. Initialisation, basic send and receive functionality working, still f
 - [ ] Interrupt Mode
 - [ ] DMA support
 
+## Usage
+
+Atmel XPlained PRO Zigbit + ATRF212B-0-U pinout:
+```
+2.  GND
+5.  nRST
+9.  IRQ
+10. SLP/TR
+15. CS
+16. MOSI
+17. MISO
+18. CLK
+19. GND
+20. VCC
+```
+
 ------
 
 This project is MIT licensed to avoid placing limitations on possible uses. 
